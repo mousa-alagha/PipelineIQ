@@ -5,7 +5,7 @@ from rag_core.ingest import ingest
 from rag_core.qa import load_index, answer_and_summarize, load_conv_chain
 
 # ─────────────────────────────
-# 1) PAGE CONFIG & GLOBAL CSS
+# 1) PAGE CONFIG & GLOBAL CS
 # ─────────────────────────────
 st.set_page_config(page_title="PipelineIQ", page_icon="/Users/mousa/Desktop/PipelineIQ/assets/adnoc-logo2.png", layout="wide")
 
