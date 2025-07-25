@@ -125,9 +125,7 @@ with col_title:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# ─────────────────────────────
-# 3) SIDEBAR (Admin)
-# ─────────────────────────────
+
 with st.sidebar:
     st.header("Admin")
     if st.button("Re-Ingest PDFs", use_container_width=True):
