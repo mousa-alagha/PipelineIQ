@@ -5,3 +5,5 @@ openai
 faiss-cpu
 streamlit
 jupyterlab
+pycryptodome
+tiktoken
