@@ -200,9 +200,7 @@ if ask and user_query:
 
         st.session_state.history.append((user_query, answer, summary))
 
-# ─────────────────────────────
-# 7) RENDER HISTORY (latest first)
-# ─────────────────────────────
+
 for q, a, s in reversed(st.session_state.history):
     bullets = "".join(
         f"<li>{line.strip('- ').strip()}</li>"
