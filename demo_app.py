@@ -4,9 +4,7 @@ from pathlib import Path
 from rag_core.ingest import ingest
 from rag_core.qa import load_index, answer_and_summarize, load_conv_chain
 
-# ─────────────────────────────
-# 1) PAGE CONFIG & GLOBAL CS
-# ─────────────────────────────
+
 st.set_page_config(page_title="PipelineIQ", page_icon="/Users/mousa/Desktop/PipelineIQ/assets/adnoc-logo2.png", layout="wide")
 
 CONTENT_WIDTH = 1100  # pick one number and everything will match it
