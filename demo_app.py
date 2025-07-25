@@ -164,9 +164,7 @@ def _get_index():
 
 index = _get_index()
 
-# ─────────────────────────────
-# 5) ASK FORM (no phantom widgets)
-# ─────────────────────────────
+
 st.markdown(
     '<h2 style="margin-top:1rem; margin-bottom:0; color:#0047BA;">Ask a question</h2>',
     unsafe_allow_html=True,
