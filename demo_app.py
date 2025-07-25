@@ -150,9 +150,7 @@ with st.sidebar:
         else:  # older Streamlit
             st.experimental_rerun()
 
-# ─────────────────────────────
-# 4) STATE INIT
-# ─────────────────────────────
+
 if "conv_chain" not in st.session_state:
     st.session_state.conv_chain = load_conv_chain()
 
