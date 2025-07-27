@@ -18,47 +18,6 @@ PipelineIQ ingests your PDFs, chunks and embeds them with OpenAI, stores vectors
 
 ## Architecture (high level)
 
-
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant U as User
-  participant UI as Streamlit UI
-  participant R as Router
-  participant RAG as RAG
-  participant H as Hybrid
-  participant VS as FAISS/BM25
-  participant L as LLM
-  participant G as Guard-Summarizer
-  participant ING as Ingestion Pipeline
-
-  U->>UI: Enter question
-  UI->>R: Query + history
-  R->>RAG: Retrieve context
-  RAG->>H: Hybrid search
-  H->>VS: Semantic + keyword lookup
-  VS-->>H: Top-k chunks
-  H-->>RAG: Reranked chunks
-  R->>L: Prompt + chunks
-  L-->>R: Draft answer
-  R->>G: Check citations + summarize
-  G-->>R: Verified answer + 3 bullets
-  R-->>UI: Answer + sources + bullets
-
-  opt Admin - clear history
-    UI->>R: Clear history
-    R-->>UI: History cleared
-  end
-
-  opt Admin - re-ingest PDFs
-    UI->>R: Re-ingest command
-    R->>ING: Chunk + embed documents
-    ING->>VS: Update vector store(s)
-    R-->>UI: Re-ingestion complete
-  end
-
-
 1. **Ingestion (`rag_core/ingest.py`)**
    - Read `data/metadata.json`
    - Extract text from `data/raw_documents/*.pdf`
