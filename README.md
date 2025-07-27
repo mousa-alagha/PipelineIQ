@@ -19,6 +19,8 @@ PipelineIQ ingests your PDFs, chunks and embeds them with OpenAI, stores vectors
 ## Architecture (high level)
 
 
+
+```mermaid
 sequenceDiagram
   autonumber
   participant U as User
@@ -44,18 +46,17 @@ sequenceDiagram
   G-->>R: Verified answer + 3 bullets
   R-->>UI: Answer + sources + bullets
 
-  opt Admin – clear history
+  opt Admin - clear history
     UI->>R: Clear history
     R-->>UI: History cleared
   end
 
-  opt Admin – re-ingest PDFs
+  opt Admin - re-ingest PDFs
     UI->>R: Re-ingest command
     R->>ING: Chunk + embed documents
     ING->>VS: Update vector store(s)
     R-->>UI: Re-ingestion complete
   end
-
 
 
 1. **Ingestion (`rag_core/ingest.py`)**
