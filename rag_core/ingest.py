@@ -50,7 +50,7 @@ def ingest(
     embeddings = OpenAIEmbeddings()
     index = FAISS.from_texts(texts, embeddings, metadatas=metadatas)
 
-    # 5) Save index locally
+
     os.makedirs(store_dir, exist_ok=True)
     index.save_local(store_dir)
     print(f"> Vector store saved to: {store_dir}")
