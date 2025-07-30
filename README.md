@@ -18,6 +18,9 @@ PipelineIQ ingests your PDFs, chunks and embeds them with OpenAI, stores vectors
 
 ## Architecture (high level)
 
+![System overview](imgs/system-overview.png)
+
+
 1. **Ingestion (`rag_core/ingest.py`)**
    - Read `data/metadata.json`
    - Extract text from `data/raw_documents/*.pdf`
