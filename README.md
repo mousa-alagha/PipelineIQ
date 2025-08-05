@@ -18,6 +18,9 @@ PipelineIQ ingests your PDFs, chunks and embeds them with OpenAI, stores vectors
 
 ## Architecture (high level)
 
+![System overview](imgs/system-overview.png)
+
+
 1. **Ingestion (`rag_core/ingest.py`)**
    - Read `data/metadata.json`
    - Extract text from `data/raw_documents/*.pdf`
@@ -41,19 +44,19 @@ PipelineIQ ingests your PDFs, chunks and embeds them with OpenAI, stores vectors
 ```
 PipelineIQ/
 ├── data/
-│   ├── raw_documents/           # your PDFs go here
-│   └── metadata.json            # [{"title": "...", "filename": "..."}]
+│   ├── raw_documents/          
+│   └── metadata.json   
 ├── notebooks/
-│   └── 1_ingest.ipynb           # optional: ingest via notebook
+│   └── 1_ingest.ipynb          
 ├── rag_core/
 │   ├── __init__.py
-│   ├── ingest.py                # build & persist FAISS vector store
-│   └── qa.py                    # load index, QA & summarization helpers
-├── vectorstore/                 # generated FAISS artifacts (after ingest)
+│   ├── ingest.py             
+│   └── qa.py                    
+├── vectorstore/
 ├── .streamlit/
-│   └── config.toml              # Streamlit theme (ADNOC colors)
-├── .env.example                 # copy to .env and set OPENAI_API_KEY
-├── demo_app.py                  # Streamlit UI
+│   └── config.toml             
+├── .env.example                
+├── demo_app.py                 
 ├── requirements.txt
 └── README.md
 ```
@@ -73,7 +76,7 @@ PipelineIQ/
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate           # Windows: .venv\Scripts\activate
+source .venv/bin/activate          
 ```
 
 ### 2) Install dependencies
@@ -161,7 +164,7 @@ Ensure `.env` exists and `OPENAI_API_KEY` is set, then:
 
 ```bash
 source .venv/bin/activate
-export OPENAI_API_KEY=sk-...   # or rely on python-dotenv loading .env
+export OPENAI_API_KEY=sk-...   
 ```
 
 ### `DependencyError: PyCryptodome is required for AES algorithm`
