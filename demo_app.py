@@ -5,6 +5,80 @@ from pathlib import Path
 from rag_core.ingest import ingest
 from rag_core.qa import load_index, answer_and_summarize, load_conv_chain
 from textwrap import dedent
+from pathlib import Path
+from io import BytesIO
+from openai import OpenAI
+
+import os
+import tempfile            # <-- add this
+from uuid import uuid4     # <-- only needed if you keep/use speak_answer()
+import html
+
+
+
+# 1) Hard-code your key (DO NOT COMMIT THIS)
+os.environ["OPENAI_API_KEY"] = "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"
+
+# 2) Create the OpenAI client using that key
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+
+
+
+def speak_answer(answer_text: str):
+    if not answer_text:
+        return
+
+    client = OpenAI()  # or: OpenAI(api_key="YOUR_KEY")
+    out_path = Path(f"/tmp/tts_{uuid4().hex}.mp3")
+
+    try:
+        with client.audio.speech.with_streaming_response.create(
+            model="gpt-4o-mini-tts",
+            voice="alloy",
+            input=answer_text,
+        ) as resp:
+            resp.stream_to_file(out_path)
+
+        with open(out_path, "rb") as f:
+            st.audio(f.read(), format="audio/mp3")
+    except Exception as e:
+        st.warning(f"TTS error: {e}")
+
+
+
+
+@st.cache_data(show_spinner=False)
+def tts_openai_bytes(
+    text: str,
+    model: str = "gpt-4o-mini-tts",
+    voice: str = "alloy",
+) -> bytes:
+    """Return MP3 bytes for the given text using OpenAI TTS."""
+    if not text:
+        return b""
+
+    try:
+        # Stream to a temp file (SDK-compatible way)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+            tmp_path = tmp.name
+
+        with client.audio.speech.with_streaming_response.create(
+            model=model,
+            voice=voice,
+            input=text,
+        ) as resp:
+            resp.stream_to_file(tmp_path)
+
+        with open(tmp_path, "rb") as f:
+            data = f.read()
+        os.remove(tmp_path)
+        return data
+    except Exception as e:
+        st.warning(f"TTS error: {e}")
+        return b""
+
+
 
 st.set_page_config(page_title="PipelineIQ", page_icon="/Users/mousa/Desktop/PipelineIQ/assets/adnoc-logo2.png", layout="wide")
 
@@ -117,6 +191,52 @@ st.markdown(
         font-size: 0.78rem;
         margin-top: 6px;
       }}
+
+      /* Action toolbar that sits on the card's top-right corner */
+      .card-toolbar {{
+        position: relative;
+        margin-top: -36px;       /* pulls the toolbar up onto the card */
+        margin-right: 6px;
+        display: flex;
+        justify-content: flex-end;
+        z-index: 2;
+      }}
+
+      .card-toolbar .stButton > button {{
+        background: #E6F0FF !important;
+        color: #0047BA !important;
+        border: 1px solid #CCE0FF !important;
+        border-radius: 999px !important;
+        padding: 4px 10px !important;
+        font-weight: 600 !important;
+      }}
+
+      /* audio inline spacing so it feels part of the card */
+      .audio-inline {{
+        margin-top: 8px;
+      }}
+
+      
+
+      /* A little footer area that visually sits INSIDE the card, under the bullets */
+      .card-footer {{
+        margin: 8px 20px 6px 20px;   /* matches the card’s inner padding */
+      }}
+
+      .card-footer .stButton > button {{
+        background: #E6F0FF !important;
+        color: #0047BA !important;
+        border: 1px solid #CCE0FF !important;
+        border-radius: 999px !important;
+        padding: 4px 12px !important;
+        font-weight: 600 !important;
+      }}
+
+      /* tighter spacing for the inline audio player */
+      .card-audio {{
+        margin-top: 6px;
+      }}
+
     </style>
     """,
     unsafe_allow_html=True,
@@ -179,6 +299,134 @@ if "history" not in st.session_state:
 def _get_index():
     return load_index()
 
+
+
+
+
+
+
+def chips_from_docs(docs):
+    """
+    Build labels like 'file.pdf (page: 12, 13)' from retrieved docs.
+    Handles LangChain Documents, dicts, or plain strings.
+    """
+    pages_by_src = {}
+
+    for d in docs or []:
+        # 1) Document with metadata
+        if hasattr(d, "metadata"):
+            src = str(d.metadata.get("source", ""))
+            page = d.metadata.get("page", None)
+        # 2) dict-like
+        elif isinstance(d, dict):
+            src = str(d.get("source", ""))
+            page = d.get("page", None)
+        # 3) plain string (just a source)
+        else:
+            src = str(d)
+            page = None
+
+        if not src:
+            continue
+
+        src_name = Path(src).name
+        pages_by_src.setdefault(src_name, set())
+        if isinstance(page, int):
+            pages_by_src[src_name].add(page)
+
+    labels = []
+    for src_name, pages in pages_by_src.items():
+        if not pages:
+            labels.append(src_name)
+        else:
+            p = sorted(pages)
+            if len(p) == 1:
+                labels.append(f"{src_name} (page: {p[0]})")
+            else:
+                labels.append(f"{src_name} (pages: {', '.join(map(str, p))})")
+    return labels
+
+
+def render_card(q: str, a: str, s: str, docs, key: str | None = None) -> None:
+    """
+    Render one Q/A card with:
+      - source chips (with page numbers)
+      - Q and A text
+      - 3-bullet summary 's'
+      - a 'Listen' (TTS) button visually inside the card under the bullets
+
+    Requires helper functions:
+      - chips_from_docs(docs) -> list[str]
+      - tts_openai_bytes(text) -> bytes | None
+    """
+    # Ensure each card/widgets get a unique key
+    if key is None:
+        key = uuid4().hex
+
+    # Build chips
+    chip_labels = chips_from_docs(docs) if docs else []
+    chips_html = "".join(f"<span class='src-chip'>{html.escape(lbl)}</span>" for lbl in chip_labels)
+
+    # Build bullets from the summary 's'
+    bullets_html = ""
+    if s:
+        items = []
+        for line in s.split("\n"):
+            t = line.strip()
+            if t.startswith("-"):
+                items.append(f"<li>{html.escape(t.lstrip('- ').strip())}</li>")
+        if items:
+            bullets_html = "<ul>" + "".join(items) + "</ul>"
+
+    # Render the card shell (note: pure HTML — Streamlit widgets go next)
+    st.markdown(
+        f"""
+        <div class="chat-card" id="card-{key}">
+          <div class="src-box">{chips_html}</div>
+          <p><strong style="color:#0047BA;">Q:</strong> {html.escape(q)}</p>
+          <p><strong style="color:#0047BA;">A:</strong> {a}</p>
+          {bullets_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Add a small widget row that *looks* inside the card.
+    # We nudge it up with CSS so it visually sits within the card, under the bullets.
+    # (Streamlit can’t truly place widgets inside raw HTML, so we mimic it.)
+    with st.container():
+        c1, c2 = st.columns([0.18, 1], vertical_alignment="center")
+        with c1:
+            play = st.button("🔊 Listen", key=f"tts_btn_{key}", help="Read this answer aloud")
+        with c2:
+            if play:
+                audio = tts_openai_bytes(a)
+                if audio:
+                    st.audio(audio, format="audio/mp3")
+                else:
+                    st.info("Could not generate audio.")
+
+    # Nudge the widget row up so it visually belongs to the card
+    st.markdown(
+        f"""
+        <style>
+          /* The container Streamlit renders right after the card gets pulled up */
+          #card-{key} + div.stContainer {{
+            margin-top: -10px;     /* pull it into the card */
+            margin-left: 8px;
+            margin-right: 8px;
+            padding-bottom: 6px;
+          }}
+          /* Make the Listen button a bit smaller so it feels like a card action */
+          [data-testid="baseButton-secondary"][data-testid][aria-label="🔊 Listen"],
+          .stButton > button[kind="secondary"] {{
+            padding: 0.25rem 0.6rem;
+          }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 index = _get_index()
 
 # ─────────────────────────────
@@ -232,43 +480,37 @@ def extract_sources_and_clean(answer_text: str):
 # ─────────────────────────────
 # Handle submit
 # ─────────────────────────────
+# when the user submits:
 if ask and user_query:
     with st.spinner("Thinking…"):
         if st.session_state.history:
-            # Conversational QA
+            # Conversational turn
             resp = st.session_state.conv_chain({
                 "question": user_query,
-                "chat_history": [(q, a) for q, a, _ in st.session_state.history],
+                "chat_history": [(q, a) for q, a, *_ in st.session_state.history],
             })
             answer = resp["answer"]
-            # Summarize the *answer text* (cheaper) or the whole context if you prefer
-            _, summary = answer_and_summarize(answer, index)
+            docs = resp.get("source_documents", [])  # <- Document list
+            # Summarize the answer text (cheap)
+            _, summary, _ = answer_and_summarize(answer, index)
         else:
-            # First turn: simple RAG
-            answer, summary = answer_and_summarize(user_query, index)
+            # First turn: do RAG directly and keep the docs we retrieved
+            answer, summary, docs = answer_and_summarize(user_query, index)
 
-        st.session_state.history.append((user_query, answer, summary))
+        # Save docs with the turn
+        st.session_state.history.append((user_query, answer, summary, docs))
 
 # ─────────────────────────────
 # Render history (latest first)
 # ─────────────────────────────
-for q, a, s in reversed(st.session_state.history):
-    clean_answer, sources = extract_sources_and_clean(a)
+from textwrap import dedent
 
-    bullets = "".join(
-        f"<li>{line.strip('- ').strip()}</li>"
-        for line in s.split("\n")
-        if line.strip().startswith("-")
-    )
-    chips = "".join(f"<span class='src-chip'>{src}</span>" for src in sources)
-
-    card_html = dedent(f"""
-    <div class="chat-card">
-      <div class="src-box">{chips}</div>
-      <p><strong style="color:#0047BA;">Q:</strong> {q}</p>
-      <p><strong style="color:#0047BA;">A:</strong> {clean_answer}</p>
-      {('<ul>' + bullets + '</ul>') if bullets else ''}
-    </div>
-    """).strip()
-
-    st.markdown(card_html, unsafe_allow_html=True)
+# Render newest first
+# Render newest first, with unique keys
+for idx, item in enumerate(reversed(st.session_state.history)):
+    if len(item) == 4:
+        q, a, s, docs = item
+    else:
+        q, a, s = item
+        docs = []
+    render_card(q, a, s, docs, key=f"card-{idx}")

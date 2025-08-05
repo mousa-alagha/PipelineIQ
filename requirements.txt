@@ -7,3 +7,4 @@ streamlit
 jupyterlab
 pycryptodome
 tiktoken
+pypdf>=4.0.0

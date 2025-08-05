@@ -1,55 +1,46 @@
+# rag_core/qa.py
+from __future__ import annotations
+
+from typing import List, Tuple
+import re
+
 from dotenv import load_dotenv
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores.faiss import FAISS
 from langchain.chat_models import ChatOpenAI
 from langchain.chains.qa_with_sources import load_qa_with_sources_chain
 from langchain.chains import ConversationalRetrievalChain
-from langchain.schema import HumanMessage
+from langchain.schema import HumanMessage, Document
 
 
-def load_index(store_dir: str = "vectorstore"):
+def load_index(store_dir: str = "vectorstore") -> FAISS:
     """Load the FAISS index from disk (trusting your own pickle)."""
     load_dotenv()
     embeddings = OpenAIEmbeddings()
     return FAISS.load_local(
         store_dir,
         embeddings,
-        allow_dangerous_deserialization=True
-    )
-
-
-def load_conv_chain(
-    store_dir: str = "vectorstore",
-    temperature: float = 0.0
-) -> ConversationalRetrievalChain:
-    """
-    Load a conversational retrieval chain that carries chat history forward,
-    so follow-up pronouns are resolved correctly.
-    """
-    load_dotenv()
-    embeddings = OpenAIEmbeddings()
-    index = FAISS.load_local(
-        store_dir,
-        embeddings,
         allow_dangerous_deserialization=True,
     )
+
+
+from langchain.chains import ConversationalRetrievalChain
+
+def load_conv_chain(store_dir: str = "vectorstore", temperature: float = 0.0):
+    load_dotenv()
+    embeddings = OpenAIEmbeddings()
+    index = FAISS.load_local(store_dir, embeddings, allow_dangerous_deserialization=True)
     llm = ChatOpenAI(temperature=temperature)
-    conv = ConversationalRetrievalChain.from_llm(
+    return ConversationalRetrievalChain.from_llm(
         llm,
         retriever=index.as_retriever(),
-        return_source_documents=False,
+        return_source_documents=True,   # <-- important
     )
-    return conv
 
 
-def answer_and_summarize(
-    question: str,
-    index: FAISS,
-    k: int = 3,
-    temperature: float = 0.0,
-):
-    """Run a QA chain on the top-k docs and then summarize the answer."""
-    # First, do standard QA with sources
+import re
+
+def answer_and_summarize(question: str, index: FAISS, k: int = 3, temperature: float = 0.0):
     llm = ChatOpenAI(temperature=temperature)
     qa = load_qa_with_sources_chain(llm, chain_type="stuff")
 
@@ -57,8 +48,8 @@ def answer_and_summarize(
     result = qa({"input_documents": docs, "question": question})
     answer = result["output_text"]
 
-    # Then create a 3-bullet summary
-    summary_msg = llm([
-        HumanMessage(content=f"Summarize this answer in 3 bullet points:\n\n{answer}")
-    ])
-    return answer, summary_msg.content
+    # Strip any 'SOURCES:' footer the chain might add
+    answer = re.sub(r"\n?SOURCES:.*$", "", answer, flags=re.IGNORECASE | re.DOTALL).strip()
+
+    summary_msg = llm([HumanMessage(content=f"Summarize this answer in 3 bullet points:\n\n{answer}")])
+    return answer, summary_msg.content, docs

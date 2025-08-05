@@ -1,56 +1,47 @@
-import os, json
+# rag_core/ingest.py
+from __future__ import annotations
+
+from pathlib import Path
+from typing import List
+
 from dotenv import load_dotenv
-from PyPDF2 import PdfReader
-from PyPDF2.errors import DependencyError
+from pypdf import PdfReader  # pip install pypdf
+from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores.faiss import FAISS
 
-def ingest(
-    data_dir: str = "data/raw_documents",
-    meta_path: str = "data/metadata.json",
-    store_dir: str = "vectorstore",
-):
-    """Read PDFs, extract & chunk text, embed, and save FAISS index."""
-    # Load environment (OPENAI_API_KEY)
+
+def ingest(data_dir: str = "data/raw_documents", store_dir: str = "vectorstore") -> None:
+    """
+    Read PDFs, create one Document per *page* with metadata
+    {"source": <filename>, "page": <1-based>}, split into chunks, and save FAISS.
+    """
     load_dotenv()
 
-    # 1) Load metadata file with filenames and titles
-    with open(meta_path, "r", encoding="utf-8") as f:
-        docs = json.load(f)
+    docs: List[Document] = []
+    data_path = Path(data_dir)
 
-    # 2) Initialize text splitter and containers
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    texts, metadatas = [], []
+    for pdf_path in sorted(data_path.glob("*.pdf")):
+        reader = PdfReader(str(pdf_path))
+        for i, page in enumerate(reader.pages, start=1):
+            text = page.extract_text() or ""
+            if not text.strip():
+                continue
+            docs.append(
+                Document(
+                    page_content=text,
+                    metadata={"source": pdf_path.name, "page": i},
+                )
+            )
 
-    # 3) Process each document
-    for doc in docs:
-        filename = doc["filename"]
-        file_path = os.path.join(data_dir, filename)
-        try:
-            reader = PdfReader(file_path)
-        except DependencyError:
-            print(f"⛔ Skipping encrypted file: {filename}")
-            continue
+    if not docs:
+        raise RuntimeError("No pages with text were ingested.")
 
-        # Extract full text and split into chunks
-        full_text = "".join(page.extract_text() or "" for page in reader.pages)
-        chunks = splitter.split_text(full_text)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
+    chunked = splitter.split_documents(docs)  # keeps metadata (source/page)
 
-        # Append to lists
-        texts.extend(chunks)
-        metadatas.extend([
-            {"title": doc["title"], "source": filename}
-            for _ in chunks
-        ])
-
-    print(f"> Prepared {len(texts)} chunks from {len(docs)} documents.")
-
-    # 4) Build embeddings and FAISS index
     embeddings = OpenAIEmbeddings()
-    index = FAISS.from_texts(texts, embeddings, metadatas=metadatas)
-
-
-    os.makedirs(store_dir, exist_ok=True)
-    index.save_local(store_dir)
-    print(f"> Vector store saved to: {store_dir}")
+    vs = FAISS.from_documents(chunked, embeddings)
+    vs.save_local(store_dir)
+    print(f"[ingest] Saved {len(chunked)} chunks to {store_dir}")
