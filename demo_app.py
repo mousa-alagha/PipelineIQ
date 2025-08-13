@@ -29,7 +29,7 @@ def speak_answer(answer_text: str):
     if not answer_text:
         return
 
-    client = OpenAI()  # or: OpenAI(api_key="YOUR_KEY")
+    client = OpenAI()
     out_path = Path(f"/tmp/tts_{uuid4().hex}.mp3")
 
     try:
@@ -59,7 +59,7 @@ def tts_openai_bytes(
         return b""
 
     try:
-        # Stream to a temp file (SDK-compatible way)
+        
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
             tmp_path = tmp.name
 

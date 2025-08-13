@@ -39,7 +39,7 @@ def ingest(data_dir: str = "data/raw_documents", store_dir: str = "vectorstore")
         raise RuntimeError("No pages with text were ingested.")
 
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
-    chunked = splitter.split_documents(docs)  # keeps metadata (source/page)
+    chunked = splitter.split_documents(docs)
 
     embeddings = OpenAIEmbeddings()
     vs = FAISS.from_documents(chunked, embeddings)
