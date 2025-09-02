@@ -1,4 +1,4 @@
-# rag_core/qa.py
+
 from __future__ import annotations
 
 from typing import List, Tuple
@@ -34,7 +34,7 @@ def load_conv_chain(store_dir: str = "vectorstore", temperature: float = 0.0):
     return ConversationalRetrievalChain.from_llm(
         llm,
         retriever=index.as_retriever(),
-        return_source_documents=True,   # <-- important
+        return_source_documents=True,   
     )
 
 
@@ -48,7 +48,7 @@ def answer_and_summarize(question: str, index: FAISS, k: int = 3, temperature: f
     result = qa({"input_documents": docs, "question": question})
     answer = result["output_text"]
 
-    # Strip any 'SOURCES:' footer the chain might add
+    
     answer = re.sub(r"\n?SOURCES:.*$", "", answer, flags=re.IGNORECASE | re.DOTALL).strip()
 
     summary_msg = llm([HumanMessage(content=f"Summarize this answer in 3 bullet points:\n\n{answer}")])
