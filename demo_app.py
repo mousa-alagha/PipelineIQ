@@ -10,16 +10,14 @@ from io import BytesIO
 from openai import OpenAI
 
 import os
-import tempfile            # <-- add this
-from uuid import uuid4     # <-- only needed if you keep/use speak_answer()
+import tempfile            
+from uuid import uuid4     
 import html
 
 
 
-# 1) Hard-code your key (DO NOT COMMIT THIS)
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "------"
 
-# 2) Create the OpenAI client using that key
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 
@@ -82,7 +80,7 @@ def tts_openai_bytes(
 
 st.set_page_config(page_title="PipelineIQ", page_icon="/Users/mousa/Desktop/PipelineIQ/assets/adnoc-logo2.png", layout="wide")
 
-CONTENT_WIDTH = 1100  # pick one number and everything will match it
+CONTENT_WIDTH = 1100 
 
 st.markdown(
     f"""
@@ -179,7 +177,7 @@ st.markdown(
         background: #E6F0FF;
         color: #0047BA;
         padding: 2px 8px;
-        margin: 0;               /* chips are inside a flex box now */
+        margin: 0;               
         border-radius: 999px;
         font-size: 0.82rem;
         border: 1px solid #CCE0FF;
@@ -192,10 +190,10 @@ st.markdown(
         margin-top: 6px;
       }}
 
-      /* Action toolbar that sits on the card's top-right corner */
+    
       .card-toolbar {{
         position: relative;
-        margin-top: -36px;       /* pulls the toolbar up onto the card */
+        margin-top: -36px;     
         margin-right: 6px;
         display: flex;
         justify-content: flex-end;
@@ -211,14 +209,14 @@ st.markdown(
         font-weight: 600 !important;
       }}
 
-      /* audio inline spacing so it feels part of the card */
+      
       .audio-inline {{
         margin-top: 8px;
       }}
 
       
 
-      /* A little footer area that visually sits INSIDE the card, under the bullets */
+      
       .card-footer {{
         margin: 8px 20px 6px 20px;   /* matches the card’s inner padding */
       }}
@@ -242,9 +240,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ─────────────────────────────
-# 2) HEADER (logo + title)
-# ─────────────────────────────
+
 logo_path = Path(__file__).parent / "assets" / "lo.png"
 
 col_logo, col_title = st.columns([1, 8], gap="small")
@@ -262,9 +258,7 @@ with col_title:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# ─────────────────────────────
-# Sidebar
-# ─────────────────────────────
+
 with st.sidebar:
     st.header("Admin")
     if st.button("Re-Ingest PDFs", use_container_width=True):
@@ -274,27 +268,24 @@ with st.sidebar:
     st.divider()
 
     if st.button("Clear chat history", use_container_width=True):
-        # wipe just what we use
+        
         st.session_state.pop("history", None)
-        st.session_state.pop("conv_chain", None)   # optional: force a fresh chain next run
+        st.session_state.pop("conv_chain", None)   
         st.session_state.pop("ask_input", None)
 
-        # Streamlit >= 1.27
         if hasattr(st, "rerun"):
             st.rerun()
-        else:  # older Streamlit
+        else: 
             st.experimental_rerun()
 
-# ─────────────────────────────
-# State init
-# ─────────────────────────────
+
 if "conv_chain" not in st.session_state:
     st.session_state.conv_chain = load_conv_chain()
 
 if "history" not in st.session_state:
-    st.session_state.history = []  # list of (q, a, summary)
+    st.session_state.history = [] 
 
-# Cache the vectorstore only once per run to avoid reload every question
+
 @st.cache_resource(show_spinner=False)
 def _get_index():
     return load_index()
@@ -313,15 +304,15 @@ def chips_from_docs(docs):
     pages_by_src = {}
 
     for d in docs or []:
-        # 1) Document with metadata
+        
         if hasattr(d, "metadata"):
             src = str(d.metadata.get("source", ""))
             page = d.metadata.get("page", None)
-        # 2) dict-like
+       
         elif isinstance(d, dict):
             src = str(d.get("source", ""))
             page = d.get("page", None)
-        # 3) plain string (just a source)
+      
         else:
             src = str(d)
             page = None
@@ -359,15 +350,15 @@ def render_card(q: str, a: str, s: str, docs, key: str | None = None) -> None:
       - chips_from_docs(docs) -> list[str]
       - tts_openai_bytes(text) -> bytes | None
     """
-    # Ensure each card/widgets get a unique key
+    
     if key is None:
         key = uuid4().hex
 
-    # Build chips
+ 
     chip_labels = chips_from_docs(docs) if docs else []
     chips_html = "".join(f"<span class='src-chip'>{html.escape(lbl)}</span>" for lbl in chip_labels)
 
-    # Build bullets from the summary 's'
+
     bullets_html = ""
     if s:
         items = []
@@ -378,7 +369,7 @@ def render_card(q: str, a: str, s: str, docs, key: str | None = None) -> None:
         if items:
             bullets_html = "<ul>" + "".join(items) + "</ul>"
 
-    # Render the card shell (note: pure HTML — Streamlit widgets go next)
+  
     st.markdown(
         f"""
         <div class="chat-card" id="card-{key}">
@@ -391,9 +382,7 @@ def render_card(q: str, a: str, s: str, docs, key: str | None = None) -> None:
         unsafe_allow_html=True,
     )
 
-    # Add a small widget row that *looks* inside the card.
-    # We nudge it up with CSS so it visually sits within the card, under the bullets.
-    # (Streamlit can’t truly place widgets inside raw HTML, so we mimic it.)
+    
     with st.container():
         c1, c2 = st.columns([0.18, 1], vertical_alignment="center")
         with c1:
@@ -406,7 +395,7 @@ def render_card(q: str, a: str, s: str, docs, key: str | None = None) -> None:
                 else:
                     st.info("Could not generate audio.")
 
-    # Nudge the widget row up so it visually belongs to the card
+    
     st.markdown(
         f"""
         <style>
@@ -429,9 +418,6 @@ def render_card(q: str, a: str, s: str, docs, key: str | None = None) -> None:
 
 index = _get_index()
 
-# ─────────────────────────────
-# Ask form
-# ─────────────────────────────
 st.markdown(
     '<h2 style="margin-top:1rem; margin-bottom:0; color:#0047BA;">Ask a question</h2>',
     unsafe_allow_html=True,
@@ -445,9 +431,7 @@ with st.form("ask_form", clear_on_submit=True):
     )
     ask = st.form_submit_button("Ask")
 
-# ─────────────────────────────
-# Helper: extract sources from answer tail
-# ─────────────────────────────
+
 def extract_sources_and_clean(answer_text: str):
     """
     Parse 'SOURCES: ...' from the answer (anywhere in the string).
@@ -456,18 +440,18 @@ def extract_sources_and_clean(answer_text: str):
     if not answer_text:
         return answer_text, []
 
-    # Find the first SOURCES: occurrence (case-insensitive), grab everything after it
+   
     m = re.search(r"(?i)\bSOURCES?:\s*(.+)$", answer_text.strip(), flags=re.DOTALL)
     if not m:
         return answer_text.strip(), []
 
-    # Text after 'SOURCES:' (may include multiple filenames separated by commas/semicolons/bullets/newlines)
+  
     src_tail = m.group(1).strip()
 
-    # Clean: remove the SOURCES: … part from the answer body
+  
     clean = re.sub(r"(?i)\s*SOURCES?:\s*.+$", "", answer_text, flags=re.DOTALL).strip()
 
-    # Split on common separators
+ 
     parts = re.split(r"[;,•\n]\s*", src_tail)
     seen, sources = set(), []
     for p in parts:
@@ -477,36 +461,30 @@ def extract_sources_and_clean(answer_text: str):
             sources.append(t)
     return clean, sources
 
-# ─────────────────────────────
-# Handle submit
-# ─────────────────────────────
-# when the user submits:
+
 if ask and user_query:
     with st.spinner("Thinking…"):
         if st.session_state.history:
-            # Conversational turn
+           
             resp = st.session_state.conv_chain({
                 "question": user_query,
                 "chat_history": [(q, a) for q, a, *_ in st.session_state.history],
             })
             answer = resp["answer"]
-            docs = resp.get("source_documents", [])  # <- Document list
-            # Summarize the answer text (cheap)
+            docs = resp.get("source_documents", [])
+           
             _, summary, _ = answer_and_summarize(answer, index)
         else:
-            # First turn: do RAG directly and keep the docs we retrieved
+           
             answer, summary, docs = answer_and_summarize(user_query, index)
 
-        # Save docs with the turn
+       
         st.session_state.history.append((user_query, answer, summary, docs))
 
-# ─────────────────────────────
-# Render history (latest first)
-# ─────────────────────────────
+
 from textwrap import dedent
 
-# Render newest first
-# Render newest first, with unique keys
+
 for idx, item in enumerate(reversed(st.session_state.history)):
     if len(item) == 4:
         q, a, s, docs = item
