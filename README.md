@@ -1,13 +1,13 @@
 # PipelineIQ
 
-**AI-powered Retrieval-Augmented Generation (RAG) over oil & gas PDFs** — with a clean, ADNOC-branded Streamlit UI.  
+**AI-powered Retrieval-Augmented Generation (RAG) over oil & gas PDFs** with a clean, ADNOC-branded Streamlit UI.  
 PipelineIQ ingests your PDFs, chunks and embeds them with OpenAI, stores vectors in FAISS, and lets you chat with your corpus with sources + summaries.
 
 ---
 
 ## Features
 
-- **PDF → chunks → OpenAI embeddings → FAISS vector store**
+- **PDF to chunks to OpenAI embeddings to FAISS vector store**
 - **Conversational QA** (keeps your chat history in-session)
 - **Cited answers + 3-bullet summaries**
 - **One-click “Re-Ingest PDFs”** button in the UI
