@@ -1,11 +1,11 @@
-# rag_core/ingest.py
+
 from __future__ import annotations
 
 from pathlib import Path
 from typing import List
 
 from dotenv import load_dotenv
-from pypdf import PdfReader  # pip install pypdf
+from pypdf import PdfReader  
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
