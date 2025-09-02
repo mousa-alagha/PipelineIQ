@@ -245,7 +245,7 @@ st.markdown(
 # ─────────────────────────────
 # 2) HEADER (logo + title)
 # ─────────────────────────────
-logo_path = Path(__file__).parent / "assets" / "adnoc_logo.png"
+logo_path = Path(__file__).parent / "assets" / "lo.png"
 
 col_logo, col_title = st.columns([1, 8], gap="small")
 with col_logo:
