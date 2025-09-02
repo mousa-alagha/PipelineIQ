@@ -1,7 +1,7 @@
 [theme]
 base="light"
-primaryColor="#0047BA"            # ADNOC blue
-backgroundColor="#F0F4F8"         # pale blue-grey
-secondaryBackgroundColor="#FFFFFF"# white
-textColor="#000000"               # black
+primaryColor="#0047BA"            
+backgroundColor="#F0F4F8"         
+secondaryBackgroundColor="#FFFFFF"
+textColor="#000000"              
 font="sans serif"
